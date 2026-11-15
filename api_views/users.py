@@ -16,6 +16,19 @@ def error_message_helper(msg):
         return '{ "status": "fail", "message": "' + msg + '"}'
 
 
+# Linear-time email check: no nested or overlapping repetition, so a crafted
+# input cannot trigger catastrophic backtracking (ReDoS). The length cap
+# (254 characters, the RFC 5321 maximum) bounds the work even further.
+EMAIL_MAX_LENGTH = 254
+EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+
+
+def is_valid_email(email):
+    if not isinstance(email, str) or len(email) > EMAIL_MAX_LENGTH:
+        return False
+    return EMAIL_PATTERN.fullmatch(email) is not None
+
+
 def get_all_users():
     return_value = jsonify({'users': User.get_all_users()})
     return return_value
@@ -140,11 +153,8 @@ def update_email(username):
         return Response(error_message_helper(resp), 401, mimetype="application/json")
     else:
         user = User.query.filter_by(username=resp['sub']).first()
-        if vuln:  # Regex DoS
-            match = re.search(
-                r"^([0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*@{1}([0-9a-zA-Z][-\w]*[0-9a-zA-Z]\.)+[a-zA-Z]{2,9})$",
-                str(request_data.get('email')))
-            if match:
+        if vuln:  # Regex DoS (fixed: uses the linear-time is_valid_email check)
+            if is_valid_email(request_data.get('email')):
                 user.email = request_data.get('email')
                 db.session.commit()
                 responseObject = {
@@ -159,8 +169,7 @@ def update_email(username):
                 return Response(error_message_helper("Please Provide a valid email address."), 400,
                                 mimetype="application/json")
         else:
-            regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
-            if (re.search(regex, request_data.get('email'))):
+            if is_valid_email(request_data.get('email')):
                 user.email = request_data.get('email')
                 db.session.commit()
                 responseObject = {
