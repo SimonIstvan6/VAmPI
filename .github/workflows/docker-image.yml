@@ -4,6 +4,11 @@ on:
   push:
     branches: [ "master" ]
 
+# Least privilege: the job only reads the repository; pushing the image uses
+# Docker Hub credentials, not the GITHUB_TOKEN.
+permissions:
+  contents: read
+
 jobs:
 
   build:
