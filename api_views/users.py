@@ -20,7 +20,9 @@ def error_message_helper(msg):
 # input cannot trigger catastrophic backtracking (ReDoS). The length cap
 # (254 characters, the RFC 5321 maximum) bounds the work even further.
 EMAIL_MAX_LENGTH = 254
-EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+# Explicitly anchored (^ ... \Z) so matching can only start at the first
+# character; an unanchored leading [...]+ would retry from every position.
+EMAIL_PATTERN = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\Z")
 
 
 def is_valid_email(email):
